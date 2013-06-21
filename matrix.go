@@ -1,6 +1,6 @@
-package biglinalg
+package biglin
 
-import "github.com/jackvalmadre/vector"
+import "github.com/jackvalmadre/go-vec"
 
 type Matrix interface {
 	// Type checking is done at runtime to make the code more readable.

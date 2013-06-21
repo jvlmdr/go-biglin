@@ -1,8 +1,8 @@
-package biglinalg
+package biglin
 
 import (
 	"fmt"
-	"github.com/jackvalmadre/vector"
+	"github.com/jackvalmadre/go-vec"
 	"math"
 )
 
