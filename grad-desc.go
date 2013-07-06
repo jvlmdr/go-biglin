@@ -12,11 +12,12 @@ type GradientDescent struct {
 	Backtrack  bool
 }
 
-func (opts GradientDescent) Solve(f Objective, x vec.ConstTyped,
-		crit TerminationCriteria, callback Callback, verbose bool) (vec.MutableTyped, error) {
+func (opts GradientDescent) Solve(f Objective, x0 vec.ConstTyped,
+	crit TerminationCriteria, callback Callback, verbose bool) (vec.MutableTyped, error) {
 	k := 0
 	t := opts.StepSize
 	f_x := math.Inf(1)
+	x := vec.Clone(x0)
 	var g_x0 vec.MutableTyped
 	var x_prev vec.ConstTyped
 
@@ -49,16 +50,16 @@ func (opts GradientDescent) Solve(f Objective, x vec.ConstTyped,
 				return nil, err
 			}
 			// x <- x - t g_x
-			x = vec.CombineLinear(1, x, t, g_x)
+			vec.CopyTo(x, vec.Plus(x, vec.Scale(t, g_x)))
 		} else {
 			if !opts.Backtrack {
 				// x <- x - t g_x
-				x = vec.CombineLinear(1, x, -t, g_x)
+				vec.CopyTo(x, vec.Plus(x, vec.Scale(-t, g_x)))
 			} else {
 				var z vec.MutableTyped
 				for satisfied := false; !satisfied; {
 					// x <- x - t g_x
-					z = vec.CombineLinear(1, x, -t, g_x)
+					vec.CopyTo(z, vec.Plus(x, vec.Scale(-t, g_x)))
 					var f_z float64
 					err = f.Evaluate(z, &f_z, nil)
 					if err != nil {
@@ -80,5 +81,5 @@ func (opts GradientDescent) Solve(f Objective, x vec.ConstTyped,
 		k += 1
 	}
 
-	return vec.Copy(x), nil
+	return x, nil
 }

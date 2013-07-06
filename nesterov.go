@@ -12,15 +12,18 @@ type AcceleratedGradientDescent struct {
 	Backtrack  bool
 }
 
-func (opts AcceleratedGradientDescent) Solve(f Objective, x vec.ConstTyped,
-		crit TerminationCriteria, callback Callback, verbose bool) (vec.MutableTyped, error) {
+func (opts AcceleratedGradientDescent) Solve(f Objective, x0 vec.ConstTyped,
+	crit TerminationCriteria, callback Callback, verbose bool) (vec.MutableTyped, error) {
 	k := 0
 	alpha := opts.StepSize
 	var t float64 = 1
 	f_x := math.Inf(1)
-	var y vec.ConstTyped
-	var g_x0 vec.MutableTyped
-	var x_prev vec.ConstTyped
+	x := vec.Clone(x0)
+	var (
+		y      vec.MutableTyped
+		g_x0   vec.MutableTyped
+		x_prev vec.ConstTyped
+	)
 
 	for {
 		f_x_prev := f_x
@@ -60,16 +63,16 @@ func (opts AcceleratedGradientDescent) Solve(f Objective, x vec.ConstTyped,
 			if err != nil {
 				return nil, err
 			}
-			x = vec.CombineLinear(1, y, alpha, g_y)
+			vec.CopyTo(x, vec.Plus(y, vec.Scale(alpha, g_y)))
 		} else {
 			if !opts.Backtrack {
 				// No search involved.
-				x = vec.CombineLinear(1, y, -alpha, g_y)
+				vec.CopyTo(x, vec.Plus(y, vec.Scale(-alpha, g_y)))
 			} else {
 				var z vec.MutableTyped
 				for satisfied := false; !satisfied; {
 					// Update with current alpha.
-					z = vec.CombineLinear(1, y, -alpha, g_y)
+					vec.CopyTo(z, vec.Plus(y, vec.Scale(-alpha, g_y)))
 					var f_z float64
 					err = f.Evaluate(z, &f_z, nil)
 					if err != nil {
@@ -88,11 +91,12 @@ func (opts AcceleratedGradientDescent) Solve(f Objective, x vec.ConstTyped,
 			}
 		}
 
-		t_next := (1+math.Sqrt(4*t*t+1)) / 2
-		y = vec.CombineLinear(1, x, (t-1)/t_next, vec.Subtract(x, x_prev))
+		t_next := (1 + math.Sqrt(4*t*t+1)) / 2
+		dx := vec.Minus(x, x_prev)
+		vec.CopyTo(y, vec.Plus(x, vec.Scale((t-1)/t_next, dx)))
 		t = t_next
 		k += 1
 	}
 
-	return vec.Copy(x), nil
+	return x, nil
 }

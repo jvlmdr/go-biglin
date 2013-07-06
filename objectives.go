@@ -6,7 +6,6 @@ import "github.com/jackvalmadre/go-vec"
 //
 //
 type Objective interface {
-	VectorType() vec.Type
 	Evaluate(x vec.ConstTyped, y *float64, dfdx *vec.MutableTyped) error
 	LineSearch(pos, dir vec.ConstTyped) (float64, error)
 }
@@ -19,17 +18,13 @@ type Regression struct {
 	B vec.ConstTyped
 }
 
-func (f Regression) VectorType() vec.Type {
-	return f.B.Type()
-}
-
 func (f Regression) Evaluate(x vec.ConstTyped, y *float64, dfdx *vec.MutableTyped) error {
 	// r = A x - b
 	r, err := f.A.Times(x, false)
 	if err != nil {
 		return err
 	}
-	r = vec.Subtract(r, f.B)
+	vec.CopyTo(r, vec.Minus(r, f.B))
 	if y != nil {
 		*y = 0.5 * vec.SqrNorm(r)
 	}
@@ -49,7 +44,7 @@ func (f Regression) LineSearch(x, v vec.ConstTyped) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	r = vec.Subtract(r, f.B)
+	vec.CopyTo(r, vec.Minus(r, f.B))
 	// q = A v
 	q, err := f.A.Times(v, false)
 	if err != nil {
@@ -74,17 +69,13 @@ type RidgeRegression struct {
 	Lambda float64
 }
 
-func (f RidgeRegression) VectorType() vec.Type {
-	return f.B.Type()
-}
-
 func (f RidgeRegression) Evaluate(x vec.ConstTyped, y *float64, dfdx *vec.MutableTyped) error {
 	// r = A x - b
 	r, err := f.A.Times(x, false)
 	if err != nil {
 		return err
 	}
-	r = vec.Subtract(r, f.B)
+	vec.CopyTo(r, vec.Minus(r, f.B))
 	if y != nil {
 		*y = 0.5*vec.SqrNorm(r) + 0.5*f.Lambda*vec.SqrNorm(x)
 	}
@@ -95,7 +86,7 @@ func (f RidgeRegression) Evaluate(x vec.ConstTyped, y *float64, dfdx *vec.Mutabl
 			return err
 		}
 		// df/dx = A' (A x - b) + lambda x
-		*dfdx = vec.CombineLinear(1, *dfdx, f.Lambda, x)
+		vec.CopyTo(*dfdx, vec.Plus(*dfdx, vec.Scale(f.Lambda, x)))
 	}
 	return nil
 }
@@ -106,7 +97,7 @@ func (f RidgeRegression) LineSearch(x, v vec.ConstTyped) (float64, error) {
 	if err != nil {
 		return 0, err
 	}
-	r = vec.Subtract(r, f.B)
+	vec.CopyTo(r, vec.Minus(r, f.B))
 	// q = A v
 	q, err := f.A.Times(v, false)
 	if err != nil {
